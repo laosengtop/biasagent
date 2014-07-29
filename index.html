@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+        <head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+                <meta name="description" content="sys manager">
+                <meta name="author" content="calm">
+                <meta name="robots" content="NONE,NOARCHIVE">
+                <title>运维管理</title>
+                <link href="static/bootstrap.css" type="text/css" media="screen"
+                        rel="stylesheet">
+                <!-- control 左边下拉栏-->
+                <script type="text/javascript" src="static/jquery.js"></script>
+                <script type="text/javascript">
+        var logtimer;
+        function changediv(str){
+                var loghtml=$('#log-content-block').html();
+                var syshtml=$('#sys-content-block').html();
+            if(str=="log" && loghtml.indexOf("systeminfo")>0){
+                $('#log-content-block').html(syshtml);
+                $('#sys-content-block').html(loghtml)
+            }
+            if(str=="sys" && loghtml.indexOf("clearlog")>0){
+                $('#log-content-block').html(syshtml);
+                $('#sys-content-block').html(loghtml)
+            }
+
+        }
+                function isNull(value){
+                        if(value.replace(/(^\s+|\s$)/g, "")==""){
+                                return true;
+                        }else{
+                                return false;
+                        }
+                }
+                function taillog(flag){
+                        var isautolog=$("#autolog").prop("checked"); 
+                        var savebefore=$("#savebefore").prop("checked"); 
+                $('#allowfilefp_ret').html('');
+                var cmdname=$('#cmd').val();
+                        var data_str="cmd=sysinfo";
+                        var url="/taillog";
+                        var allowfile="";
+            var linenum=0;
+            if(flag==1){
+                        $("#showloading").attr("display","block");
+                        linenum=$('#linenum').val();
+                        var allowpath=$('#allowpath').html();
+                        allowfile=$('#allowfile').val();
+                                        allowpath=allowpath.replace(/(^\s*)|(\s*$)/g, "");
+                                        allowfile=allowfile.replace(/(^\s*)|(\s*$)/g, "");
+                                        allowfile=allowpath+allowfile
+                        }else{
+                        linenum=$('#linenum2').val();
+                                                allowfile=$('#allowfilefp').val();
+                                                if(isNull(allowfile)==true){
+                                                $('#allowfilefp_ret').html("请填写全路径!");
+                                                        return ;
+                                                }
+                        $("#showloading").attr("display","block");
+                     }
+                     var data_str="cmd="+cmdname+"&linenum="+linenum+"&allowfile="+allowfile;
+             var hr_str="<hr style='border:6 inset #ff0033' width='100%' SIZE=6/>"
+                 $.ajax({
+                             type: "POST",
+                             url: url,
+                             data: data_str,
+                             success: function(data) {
+                                                        $("#showloading").attr("display","none");
+                                 if(savebefore==true){
+                                      var before_str=$('#log_ret').html();
+                                      $('#log_ret').html(data+hr_str+before_str);
+                                 }else{
+                                                                        $('#log_ret').html(data);
+                                                        }
+                                },
+                                error: function(e) { 
+                                                $("#showloading").attr("display","none");
+                        var error_str="请求失败,请尝试!";
+                                                if(savebefore==true){
+                                   var before_str=$('#log_ret').html();;
+                                   $('#log_ret').html(error_str+hr_str+before_str);
+                                                }else{
+                                                        $('#log_ret').html(error_str)
+                                                }
+                                        }   
+                 });
+              if(isautolog ==false){
+                clearInterval(logtimer);
+              }
+            }
+
+        function getsysinfo(){
+                 data_str="cmd=sysinfo";
+                 url="getsysinfo";
+                 $.ajax({
+                             type: "POST",
+                             url: url,
+                             data: data_str,
+                             success: function(data) {
+                                                var data_json=jQuery.parseJSON(data); 
+                                                loadinfo_html="<table border='1' width='100%'><tr><td>loadinfo</td><td>load 5 min</td><td>load 10 min</td><td>load 15 min</td></tr>";
+                                                loadinfo_html=loadinfo_html+"<tr><td>data</td><td>"+data_json.loadinfo.lavg_5+"</td><td>"+data_json.loadinfo.lavg_1+"</td><td>"+data_json.loadinfo.lavg_15+"</td></tr>";
+                                                loadinfo_html=loadinfo_html+"</table>";
+
+                                                $("#loadinfo").html(loadinfo_html);
+
+                                                        meminfo_html="<table border='1' width='100%'><tr><td>meminfo</td><td>MemTotal </td><td>MemFree</td><td>MemPer</td></tr>";
+                                meminfo_html=meminfo_html+"<tr><td>data</td><td>"+data_json.meminfo.MemTotal+"</td><td>"+data_json.meminfo.MemFree+"</td><td>"+data_json.meminfo.MemPer+"</td></tr>";
+                                meminfo_html=meminfo_html+"</table>";
+
+                                $("#meminfo").html(meminfo_html);
+                                                        swapinfo_html="<table border='1' width='100%'><tr><td>swapinfo</td><td>SwapTotal </td><td>SwapFree</td><td>SwapPer</td></tr>";
+                                swapinfo_html=swapinfo_html+"<tr><td>data</td><td>"+data_json.meminfo.SwapTotal+"</td><td>"+data_json.meminfo.SwapFree+"</td><td>"+data_json.meminfo.SwapPer+"</td></tr>";
+                                swapinfo_html=swapinfo_html+"</table>";
+
+                                $("#swapinfo").html(swapinfo_html);
+                                }  
+                 });
+            }
+
+          function clearlog(){
+                document.getElementById("log_ret").innerHTML=""
+          } 
+      setInterval("getsysinfo()",5000);
+      function autogetlog(){
+              clearInterval(logtimer);
+                          var isautolog=$("#autolog").prop("checked"); 
+              var autoper=$('#autoper').val();
+              autoper=autoper*1000;
+              if(isautolog){
+                logtimer = setInterval("taillog(1)",autoper);
+              }
+      }
+        </script>
+        </head>
+
+        <body>
+                <div id="top-nav"
+                        class="navbar navbar-xs navbar-inverse navbar-fixed-top">
+                        <div class="navbar-header">
+                                <a class="navbar-brand" href="#">运维管理系统</a>
+                        </div>
+                        <div class="navbar-header">
+                                <a class="navbar-brand" href="#" onclick="changediv('sys')">系统信息</a>
+                        </div>
+                        <div class="navbar-header">
+                                <a class="navbar-brand" href="#" onclick="changediv('log')">日志信息</a>
+                        </div>
+                </div>
+
+                <div style="margin-top: 65px;" id="body-content" class="clearfix row">
+                        <!-- =================================================================== -->
+                        <div id="log-content-block" class="col-sm-11 col-md-10">
+                                <!-- 右侧操作区域  -->
+                                <div id="div_ser_list" class="span9" style="margin: auto 0px;">
+                                        <a id="hidden_selected_node_path" style="display: hidden" href=""></a>
+                                        <div class="row-fluid" style="margin-top: 10px;">
+                                                <div class="span12">
+                                                        <ul id="da-tab" class="nav nav-tabs">
+                                                                <li class="active">
+                                                                        <a href="#" data-toggle="tab" rel="tooltip"
+                                                                                data-placement="top" data-original-title="select host first:)">查看日志</a>
+                                                                </li>
+                                                        </ul>
+                                                        <br>
+                                                        <div id="da-tabContent" class="tab-content">
+                                                                <table width="100%">
+                                                                        <tr>
+                                                                                <td>
+                                                                                        <span id="logfile_span"> 文件路径: <span id="allowpath"
+                                                                                                name="allowpath">/home/work/logs/</span> <select
+                                                                                                        id="allowfile" name="allowfile">
+                                                                                                        <!--add_allow_file-->
+                                                                                                </select> <input type="hidden" value="taillog" name="cmd" id="cmd">
+                                                                                                <select id="linenum" name="linenum">
+                                                                                                        <option value="10" selected>
+                                                                                                                10
+                                                                                                        </option>
+                                                                                                        <option value="100">
+                                                                                                                100
+                                                                                                        </option>
+                                                                                                        <option value="1000">
+                                                                                                                1000
+                                                                                                        </option>
+                                                                                                </select> </span>
+                                                                                        <input type="button" name="tail" value="tail"
+                                                                                                onclick="taillog(1)">
+
+                                                                                </td>
+                                                                                <td rowspan="2">
+                                                                                        <!--
+                                                                                        自动刷新
+                                                                                        <input type="checkbox" id="autorefresh" name="autorefresh">
+                                                                                        -->
+                                                                                        <input type="button" id="clearlog" name="clearlog"
+                                                                                                value="clearlog" onclick="clearlog()">
+                                                                                        清理日志
+
+                                                                                        <input type="checkbox" id="savebefore" name="savebefore">
+                                                                                        保存上次记录
+
+                                                                                        <input type="checkbox" id="autolog" name="autolog" onclick="autogetlog()">
+                                            自动获取日志
+                                                                                        <select id="autoper" name="autoper" onchange="autogetlog()">
+                                                                                                        <option value="2" selected>
+                                                                                                                2
+                                                                                                        </option>
+                                                                                                        <option value="3">
+                                                                                                                3
+                                                                                                        </option>
+                                                                                                        <option value="5">
+                                                                                                                5
+                                                                                                        </option>
+                                                                                                        <option value="10">
+                                                                                                                10
+                                                                                                        </option>
+                                            </select> 获取频率(s)
+
+                                                                                </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                                <td>
+                                                                                        <br>
+                                                                                        <span id="fullpath_span2"> 文件全路径: <input type="text"
+                                                                                                        value="" id="allowfilefp" name="allowfilefp" size="50%">
+                                                                                                <select id="linenum2" name="linenum2">
+                                                                                                        <option value="10" selected>
+                                                                                                                10
+                                                                                                        </option>
+                                                                                                        <option value="100">
+                                                                                                                100
+                                                                                                        </option>
+                                                                                                        <option value="1000">
+                                                                                                                1000
+                                                                                                        </option>
+                                                                                                </select> <input type="button" name="tail2" value="tail"
+                                                                                                        onclick="taillog(2)"> <span id="allowfilefp_ret"
+                                                                                                style="color: red"></span> </span>
+                                                                                </td>
+                                                                        </tr>
+                                                                        <tr>
+                                                                                <td>
+                                                                                        <span style="color: blue"> 如果以上下拉条中没有你要找的文件，请填写在全路径, <br>例如
+                                                                                                查看 old中老日志文件
+                                                                                                请输入/home/work/logs/nginx/old/fapiao.order.mi.com.log-2014070119.gz</span>
+                                                                                </td>
+                                                                                <td>
+                                                                                        &nbsp;
+                                                                                </td>
+                                                                        </tr>
+
+                                                                </table>
+                                                                <hr>
+                                                                <div id="showloading" style="display: none">
+                                                                        <span style="color: red">正在加载中...</span>
+                                                                </div>
+                                                                <div id="log_ret">
+                                                                </div>
+                                                        </div>
+                                                </div>
+                                                <!--end of content-->
+                                        </div>
+                                        <!--end of span12-->
+                                </div>
+                                <!--end of row-->
+                        </div>
+                        <!--/span end span9-->
+                        <!-- 右侧日志区域结束 -->
+
+                                <!-- 右侧系统区域  -->
+                <div id="sys-content-block" class="col-sm-11 col-md-10">
+                                <div id="div_ser_list" class="span9" style="margin: auto 0px;">
+                                        <a id="hidden_selected_node_path" style="display: hidden" href=""></a>
+                                        <div class="row-fluid" style="margin-top: 10px;">
+                                                <div class="span12">
+                                                        <ul id="da-tab" class="nav nav-tabs">
+                                                                <li class="active">
+                                                                        <a href="#" data-toggle="tab" rel="tooltip"
+                                                                                data-placement="top" data-original-title="select host first:)">系统信息</a>
+                                                                </li>
+                                                        </ul>
+                                                        <br>
+                                                        <div id="da-tabContent" class="tab-content">
+                                                                <div id="systeminfo">
+                                                                <div id="meminfo">
+                                                                </div>
+                                                    <hr>
+                                                                <div id="swapinfo">
+                                                                </div>
+                                                    <hr>
+                                                                <div id="loadinfo">
+                                                                </div>
+                                                                <!--input type="button" onclick="getsysinfo()" value="show" -->
+                                                        </div>
+                                                        </div>
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                        <!-- 右侧系统区域结束 -->
+
+                </div>
+                <!-- =================================================================== -->
+
+        <hr style='border:6 inset #ff0033' width='100%' SIZE=6/>
+                <div id="footer">
+
+                        <footer class="text-center">
+                        <p>
+                                © company.inc 2013
+                        </p>
+                        </footer>
+                </div>
+        </body>
+</html>
